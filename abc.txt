@@ -1,0 +1,361 @@
+import java.io.IOException;
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class WordCount {
+
+  public static class TokenizerMapper
+       extends Mapper<Object, Text, Text, IntWritable>{
+
+    private final static IntWritable one = new IntWritable(1);
+    private Text word = new Text();
+
+    public void map(Object key, Text value, Context context
+                    ) throws IOException, InterruptedException {
+      StringTokenizer itr = new StringTokenizer(value.toString());
+      while (itr.hasMoreTokens()) {
+        word.set(itr.nextToken());
+        context.write(word, one);
+      }
+    }
+  }
+
+  public static class IntSumReducer
+       extends Reducer<Text,IntWritable,Text,IntWritable> {
+    private IntWritable result = new IntWritable();
+
+    public void reduce(Text key, Iterable<IntWritable> values,
+                       Context context
+                       ) throws IOException, InterruptedException {
+      int sum = 0;
+      for (IntWritable val : values) {
+        sum += val.get();
+      }
+      result.set(sum);
+      context.write(key, result);
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    Job job = Job.getInstance(conf, "word count");
+    job.setJarByClass(WordCount.class);
+    job.setMapperClass(TokenizerMapper.class);
+    job.setCombinerClass(IntSumReducer.class);
+    job.setReducerClass(IntSumReducer.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+    FileInputFormat.addInputPath(job, new Path(args[0]));
+    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
+}
+
+
+
+
+
+
+import java.io.IOException;
+import java.util.Iterator;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import
+org.apache.hadoop.mapreduce.lib.input.FileInputForm
+at;
+import
+org.apache.hadoop.mapreduce.lib.output.FileOutputFo
+rmat;
+import
+org.apache.hadoop.mapreduce.lib.output.TextOutputFo
+rmat;
+import
+org.apache.hadoop.mapreduce.lib.input.TextInputForm
+at;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.conf.Configuration;
+public class MyMaxMin {
+
+// Mapper
+/*MaxTemperatureMapper class is static
+* and extends Mapper abstract class
+* having four Hadoop generics type
+* LongWritable, Text, Text, Text.
+*/
+
+public static class MaxTemperatureMapper
+extends
+Mapper&lt;LongWritable, Text, Text, Text&gt;
+{
+
+public static final int MISSING = 9999;
+@Override
+public void map(LongWritable arg0, Text
+Value, Context context)
+throws IOException,
+InterruptedException {
+
+String line = Value.toString();
+// Check for the empty line
+if (!(line.length() == 0)) {
+
+String date = line.substring(1,
+10);
+
+float temp_Max =
+Float.parseFloat(line.substring(12, 13).trim());
+
+float temp_Min =
+Float.parseFloat(line.substring(14, 16).trim());
+
+if (temp_Max &gt; 30.0) {
+
+context.write(new Text(&quot;The Day
+is Hot Day :&quot; + date),
+new
+Text(String.valueOf(temp_Max)));
+}
+
+if (temp_Min &lt; 15) {
+
+context.write(new Text(&quot;The Day
+is Cold Day :&quot; + date),
+new
+Text(String.valueOf(temp_Min)));
+}
+}
+}
+}
+
+public static class MaxTemperatureReducer
+extends
+Reducer&lt;Text, Text, Text, Text&gt; {
+
+public void reduce(Text Key, Iterator&lt;Text&gt;
+Values, Context context)
+throws IOException,
+InterruptedException {
+
+String temperature =
+Values.next().toString();
+context.write(Key, new
+Text(temperature));
+}
+}
+
+public static void main(String[] args) throws
+Exception {
+
+Configuration conf = new Configuration();
+
+Job job = new Job(conf, &quot;weather example&quot;);
+
+job.setJarByClass(MyMaxMin.class);
+
+job.setMapOutputKeyClass(Text.class);
+
+job.setMapOutputValueClass(Text.class);
+
+job.setMapperClass(MaxTemperatureMapper.class);
+job.setReducerClass(MaxTemperatureReducer.class);
+
+job.setInputFormatClass(TextInputFormat.class);
+
+job.setOutputFormatClass(TextOutputFormat.class);
+Path OutputPath = new Path(args[1]);
+
+FileInputFormat.addInputPath(job, new
+Path(args[0]));
+
+FileOutputFormat.setOutputPath(job, new
+Path(args[1]));
+
+OutputPath.getFileSystem(conf).delete(OutputPath);
+
+System.exit(job.waitForCompletion(true) ? 0
+: 1);
+}
+}
+
+
+
+
+
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+
+import java.io.IOException;
+import java.util.HashMap;
+
+import org.apache.hadoop.mapreduce.Mapper;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class MatrixMultiplication {
+
+
+public static class MatrixMapper 
+extends Mapper<LongWritable, Text,Text, Text> {
+public void map(LongWritable key, Text value, Context
+context) throws IOException, InterruptedException {
+Configuration conf = context.getConfiguration();
+int m = Integer.parseInt(conf.get("m"));
+int p = Integer.parseInt(conf.get("p"));
+String line = value.toString();
+String[] indicesAndValue = line.split(",");
+Text outputKey = new Text();
+Text outputValue = new Text();
+if (indicesAndValue[0].equals("A")) {
+for (int k = 0; k < p; k++) {
+outputKey.set(indicesAndValue[1] + "," + k);
+outputValue.set("A," + indicesAndValue[2] + "," +
+indicesAndValue[3]);
+context.write(outputKey, outputValue);
+}
+} else {
+for (int i = 0; i < m; i++) {
+outputKey.set(i + "," + indicesAndValue[2]);
+outputValue.set("B," + indicesAndValue[1] + "," +
+indicesAndValue[3]);
+context.write(outputKey, outputValue);
+}
+}
+}
+}
+
+
+public static class MatrixReducer 
+extends Reducer<Text, Text, Text, Text> {
+public void reduce(Text key, Iterable<Text> values, Context
+context) throws IOException, InterruptedException {
+String[] value;
+HashMap<Integer, Float> hashA = new HashMap<Integer,
+Float>();
+HashMap<Integer, Float> hashB = new HashMap<Integer,
+Float>();
+for (Text val : values) {
+value = val.toString().split(",");
+if (value[0].equals("A")) {
+hashA.put(Integer.parseInt(value[1]),
+Float.parseFloat(value[2]));
+} else {
+hashB.put(Integer.parseInt(value[1]),
+Float.parseFloat(value[2]));
+}
+}
+int n =
+Integer.parseInt(context.getConfiguration().get("n"));
+float result = 0.0f;
+float a_ij;
+float b_jk;
+for (int j = 0; j < n; j++) {
+a_ij = hashA.containsKey(j) ? hashA.get(j) : 0.0f;
+b_jk = hashB.containsKey(j) ? hashB.get(j) : 0.0f;
+result += a_ij * b_jk;
+}
+if (result != 0.0f) {
+context.write(null, new Text(key.toString() + "," +
+Float.toString(result)));
+}
+}
+}
+public static void main(String[] args) throws Exception {
+Configuration conf = new Configuration();
+// A is an m-by-n matrix; B is an n-by-p matrix.
+conf.set("m", "2");
+conf.set("n", "5");
+conf.set("p", "3");
+Job job = new Job(conf, "Matrix Multiplication");
+job.setJarByClass(MatrixMultiplication.class);
+job.setOutputKeyClass(Text.class);
+job.setOutputValueClass(Text.class);
+job.setMapperClass(MatrixMapper.class);
+job.setReducerClass(MatrixReducer.class);
+job.setInputFormatClass(TextInputFormat.class);
+job.setOutputFormatClass(TextOutputFormat.class);
+FileInputFormat.addInputPath(job, new Path(args[0]));
+FileOutputFormat.setOutputPath(job, new Path(args[1]));
+job.waitForCompletion(true);
+}
+}
+
+
+
+
+
+
+select a.STOCK_SYMBOL, b.STOCK_SYMBOL, month(a.STOCK_DATE),
+(AVG(a.STOCK_PRICE_HIGH*b.STOCK_PRICE_HIGH) -
+(AVG(a.STOCK_PRICE_HIGH)*AVG(b.STOCK_PRICE_HIGH))) from nyse a join nyse b on
+a.STOCK_DATE=b.STOCK_DATE where a.STOCK_SYMBOL, month(a.STOCK_DATE);
+
+
+
+Inner join:
+Create table:
+
+Hive&gt; create table sample_join(Cid INT, Cname
+STRING, Age INT, Address STRING, Salary
+Float)
+Row format delimited fields terminated by ‘,’;
+
+Load data:
+
+LOAD DATA LOCAL INPATH ‘Customers1.csv’
+INTO TABLE sample_join;
+
+Create table:
+
+Hive&gt; create table sample_join1(Oid INT, Date
+STRING, Cid INT, Amount Float)
+Row format delimited fields terminated by ‘,’;
+
+LOAD DATA LOCAL INPATH ‘Customers1.csv’
+INTO TABLE sample_join1;
+
+hive&gt; SELECT a.Cid, a.CName, a.Age, o.Amount
+FROM sample_join a JOIN sample_join1 o ON
+(a.Cid = o.Cid);
+
+Left outer join:
+
+hive&gt; SELECT a.Cid, a.CName, a.Age, o.Amount,
+o.date FROM sample_join a LEFT OUTER JOIN
+sample_join1 o ON (a.Cid = o.Cid);
+
+hive&gt; SELECT a.Cid, a.CName, a.Age, o.Amount,
+o.date FROM sample_join a RIGHT OUTER JOIN
+sample_join1 o ON (a.Cid = o.Cid);
+
+
+
+pip -x local
+data1 = LOAD ‘student.txt’ USING PigStorage(‘|’) AS
+(sid:int,sname:chararray,sbranch:chararray,srnk:double,slocation:chararray,sgender:chararray);
+fdata1 = FILTER data1 by sgender==’female’;
+B =foreach fdata1 generate $1;
+DUMP B;
